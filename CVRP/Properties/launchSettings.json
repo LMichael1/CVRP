@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "CVRP": {
+      "commandName": "Project",
+      "commandLineArgs": "E:\\Diploma\\0155_26828_25032021.txt"
+    }
+  }
+}
