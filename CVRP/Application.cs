@@ -29,6 +29,52 @@ namespace CVRP
 
             var solution = GetInitialSolution();
             PrintSolution(solution);
+
+            Process2opt(solution);
+            PrintSolution(solution);
+        }
+
+        private void Process2opt(IEnumerable<Route> solution)
+        {
+            foreach (var route in solution)
+            {
+                Process2opt(route);
+            }
+        }
+
+        private void Process2opt(Route route)
+        {
+            var shouldRestart = true;
+
+            while (shouldRestart)
+            {
+                var bestDistance = route.Length;
+
+                for (int i = 1; i <= route.Points.Count - 3; i++)
+                {
+                    shouldRestart = false;
+
+                    for (int k = i + 1; k <= route.Points.Count - 2; k++)
+                    {
+                        var newRoute = (Route)route.Clone();
+                        newRoute.Points.Reverse(i, k - i + 1);
+
+                        var newDistance = newRoute.Length;
+
+                        if (newDistance < bestDistance)
+                        {
+                            route.Points.Reverse(i, k - i + 1);
+                            shouldRestart = true;
+                            break;
+                        }
+                    }
+
+                    if (shouldRestart)
+                    {
+                        break;
+                    }
+                }
+            }
         }
 
         private List<Route> GetInitialSolution()
@@ -78,10 +124,15 @@ namespace CVRP
 
         private void PrintSolution(List<Route> solution)
         {
+            var totalLength = 0.0;
+
             foreach (var item in solution)
             {
+                totalLength += item.Length;
                 Console.WriteLine(item);
             }
+
+            Console.WriteLine("Total Length: {0}", totalLength);
         }
 
         private void PrintData()

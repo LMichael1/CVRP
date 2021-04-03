@@ -4,7 +4,7 @@ using System.Text;
 
 namespace CVRP
 {
-    class Route
+    class Route : ICloneable
     {
         public Vehicle Vehicle { get; set; }
         public List<Point> Points { get; set; }
@@ -53,6 +53,18 @@ namespace CVRP
             stringBuilder.Append("\n---------------------------\n");
 
             return stringBuilder.ToString();
+        }
+
+        public object Clone()
+        {
+            var clone = new Route(Vehicle);
+            
+            foreach (var point in Points)
+            {
+                clone.Points.Add(point);
+            }
+
+            return clone;
         }
     }
 }
