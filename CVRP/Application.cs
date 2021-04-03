@@ -32,6 +32,56 @@ namespace CVRP
 
             Process2opt(solution);
             PrintSolution(solution);
+
+            ProcessSwap1_1(solution);
+            PrintSolution(solution);
+        }
+
+        private void ProcessSwap1_1(List<Route> solution)
+        {
+            for (int i = 0; i < solution.Count - 1; i++)
+            {
+                for (int j = i + 1; j < solution.Count; j++)
+                {
+                    Swap(solution[i], solution[j]);
+                }
+            }
+        }
+
+        private void Swap(Route first, Route second)
+        {
+            var shouldRestart = true;
+
+            while (shouldRestart)
+            {
+                shouldRestart = false;
+
+                var totalLength = first.Length + second.Length;
+
+                for (int i = 1; i < first.Points.Count - 1; i++)
+                {
+                    for (int j = 1; j < second.Points.Count - 1; j++)
+                    {
+                        var newFirst = (Route)first.Clone();
+                        var newSecond = (Route)second.Clone();
+
+                        var temp = newFirst.Points[i];
+                        newFirst.Points[i] = newSecond.Points[j];
+                        newSecond.Points[j] = temp;
+
+                        var newLength = newFirst.Length + newSecond.Length;
+                        if (newLength < totalLength)
+                        {
+                            first.Points[i] = second.Points[j];
+                            second.Points[j] = temp;
+                            shouldRestart = true;
+                            break;
+                        }
+                    }
+
+                    if (shouldRestart) break;
+                }
+            }
         }
 
         private void Process2opt(IEnumerable<Route> solution)
@@ -69,10 +119,7 @@ namespace CVRP
                         }
                     }
 
-                    if (shouldRestart)
-                    {
-                        break;
-                    }
+                    if (shouldRestart) break;
                 }
             }
         }
