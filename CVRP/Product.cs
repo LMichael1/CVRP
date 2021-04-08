@@ -18,6 +18,11 @@ namespace CVRP
             CurrentVolume = volume;
         }
 
+        public void Reset()
+        {
+            CurrentVolume = 0;
+        }
+
         public override string ToString()
         {
             return string.Format("ProductType: {0}\nVolume: {1}/{2}", Type, CurrentVolume, FullVolume);

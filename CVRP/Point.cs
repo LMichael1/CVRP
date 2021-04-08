@@ -22,6 +22,11 @@ namespace CVRP
             Product = new Product(type, volume);
         }
 
+        public void Reset()
+        {
+            Product.Reset();
+        }
+
         public override string ToString()
         {
             return string.Format("ID: {0}\nLatitude: {1}\nLongitude: {2}\n{3}",

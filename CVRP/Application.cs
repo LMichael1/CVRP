@@ -28,13 +28,98 @@ namespace CVRP
             _vehicles.Sort((a, b) => b.CompareTo(a));
 
             var solution = GetInitialSolution();
+
+            Console.WriteLine("INITIAL\n");
             PrintSolution(solution);
 
             Process2opt(solution);
+            Console.WriteLine("2-OPT\n");
             PrintSolution(solution);
 
             ProcessSwap1_1(solution);
+            Console.WriteLine("SWAP (1, 1)\n");
             PrintSolution(solution);
+
+            ProcessShift1_0(solution);
+            Console.WriteLine("SHIFT (1, 0)\n");
+            PrintSolution(solution);
+
+            Process2opt(solution);
+            Console.WriteLine("2-OPT\n");
+            PrintSolution(solution);
+
+            ProcessShift0_1(solution);
+            Console.WriteLine("SHIFT (0, 1)\n");
+            PrintSolution(solution);
+
+            Process2opt(solution);
+            Console.WriteLine("2-OPT\n");
+            PrintSolution(solution);
+        }
+
+        private void ProcessShift0_1(List<Route> solution)
+        {
+            for (int i = 0; i < solution.Count - 1; i++)
+            {
+                for (int j = i + 1; j < solution.Count; j++)
+                {
+                    Shift(solution[j], solution[i]);
+                }
+            }
+        }
+
+        private void ProcessShift1_0(List<Route> solution)
+        {
+            for (int i = 0; i < solution.Count - 1; i++)
+            {
+                for (int j = i + 1; j < solution.Count; j++)
+                {
+                    Shift(solution[i], solution[j]);
+                }
+            }
+        }
+
+        private void Shift(Route first, Route second)
+        {
+            var shouldRestart = true;
+
+            while (shouldRestart)
+            {
+                shouldRestart = false;
+
+                var totalLength = first.Length + second.Length;
+
+                for (int i = 1; i < first.Points.Count - 1; i++)
+                {
+                    var minLength = 0.0;
+                    var minIndex = 0;
+
+                    for (int j = 1; j < second.Points.Count - 1; j++)
+                    {
+                        var newFirst = (Route)first.Clone();
+                        var newSecond = (Route)second.Clone();
+
+                        newSecond.Points.Insert(j, newFirst.Points[i]);
+                        newFirst.Points.RemoveAt(i);
+
+                        var newLength = newFirst.Length + newSecond.Length;
+
+                        if (newLength < totalLength)
+                        {
+                            minLength = newLength;
+                            minIndex = j;
+                        }
+                    }
+
+                    if (minLength > 0.0)
+                    {
+                        second.Points.Insert(minIndex, first.Points[i]);
+                        first.Points.RemoveAt(i);
+                        shouldRestart = true;
+                        break;
+                    }
+                }
+            }
         }
 
         private void ProcessSwap1_1(List<Route> solution)
@@ -179,7 +264,7 @@ namespace CVRP
                 Console.WriteLine(item);
             }
 
-            Console.WriteLine("Total Length: {0}", totalLength);
+            Console.WriteLine("Total Length: {0}\n\n\n", totalLength);
         }
 
         private void PrintData()

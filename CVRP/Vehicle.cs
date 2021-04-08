@@ -45,6 +45,14 @@ namespace CVRP
             }
         }
 
+        public void Reset()
+        {
+            foreach (var barrel in Barrels)
+            {
+                barrel.Reset();
+            }
+        }
+
         public override string ToString()
         {
             StringBuilder result = new StringBuilder();

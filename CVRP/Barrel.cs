@@ -43,6 +43,12 @@ namespace CVRP
             return false;
         }
 
+        public void Reset()
+        {
+            ProductType = ProductType.None;
+            OccupiedCapacity = 0;
+        }
+
         public override string ToString()
         {
             return string.Format("{0}, {1}/{2} ", Order, OccupiedCapacity, FullCapacity);
