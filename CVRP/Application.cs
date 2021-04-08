@@ -226,12 +226,12 @@ namespace CVRP
 
                     if (currentPoint != depot)
                     {
-                        var volume = currentPoint.Product.CurrentVolume;
+                        var volume = currentPoint.CurrentVolume;
                         vehicle.FillBarrels(ref volume, ProductType.None); // None пока что
-                        currentPoint.Product.CurrentVolume = volume;
+                        currentPoint.CurrentVolume = volume;
                     }
 
-                    var destinations = _points.Where(point => !point.Product.IsEmpty).Select(point => point.ID).ToList();
+                    var destinations = _points.Where(point => !point.IsEmpty).Select(point => point.ID).ToList();
 
                     if (destinations.Count == 0) break;
 
@@ -245,7 +245,7 @@ namespace CVRP
 
                 routes.Add(route);
 
-                if (_points.Where(point => !point.Product.IsEmpty).Count() == 0)
+                if (_points.Where(point => !point.IsEmpty).Count() == 0)
                 {
                     break;
                 }
