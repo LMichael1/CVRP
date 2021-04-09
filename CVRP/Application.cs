@@ -40,7 +40,7 @@ namespace CVRP
             Console.WriteLine("SWAP (1, 1)\n");
             PrintSolution(solution);
 
-            ProcessShift1_0(solution);
+            ProcessShift1_0(ref solution);
             Console.WriteLine("SHIFT (1, 0)\n");
             PrintSolution(solution);
 
@@ -48,7 +48,7 @@ namespace CVRP
             Console.WriteLine("2-OPT\n");
             PrintSolution(solution);
 
-            ProcessShift0_1(solution);
+            ProcessShift0_1(ref solution);
             Console.WriteLine("SHIFT (0, 1)\n");
             PrintSolution(solution);
 
@@ -57,7 +57,7 @@ namespace CVRP
             PrintSolution(solution);
         }
 
-        private void ProcessShift0_1(List<Route> solution)
+        private void ProcessShift0_1(ref List<Route> solution)
         {
             for (int i = 0; i < solution.Count - 1; i++)
             {
@@ -66,9 +66,11 @@ namespace CVRP
                     Shift(solution[j], solution[i]);
                 }
             }
+
+            solution = solution.Where(route => route.Points.Count > 2).ToList();
         }
 
-        private void ProcessShift1_0(List<Route> solution)
+        private void ProcessShift1_0(ref List<Route> solution)
         {
             for (int i = 0; i < solution.Count - 1; i++)
             {
@@ -77,6 +79,8 @@ namespace CVRP
                     Shift(solution[i], solution[j]);
                 }
             }
+
+            solution = solution.Where(route => route.Points.Count > 2).ToList();
         }
 
         private void Shift(Route first, Route second)
@@ -87,11 +91,10 @@ namespace CVRP
             {
                 shouldRestart = false;
 
-                var totalLength = first.Length + second.Length;
+                var minLength = first.Length + second.Length;
 
                 for (int i = 1; i < first.Points.Count - 1; i++)
                 {
-                    var minLength = 0.0;
                     var minIndex = 0;
 
                     for (int j = 1; j < second.Points.Count - 1; j++)
@@ -104,16 +107,19 @@ namespace CVRP
 
                         var newLength = newFirst.Length + newSecond.Length;
 
-                        if (newLength < totalLength)
+                        if (newLength < minLength)
                         {
                             minLength = newLength;
                             minIndex = j;
                         }
                     }
 
-                    if (minLength > 0.0)
+                    if (minIndex > 0)
                     {
-                        second.Points.Insert(minIndex, first.Points[i]);
+                        if (second.Points[minIndex].ID != first.Points[i].ID)
+                        {
+                            second.Points.Insert(minIndex, first.Points[i]);
+                        }
                         first.Points.RemoveAt(i);
                         shouldRestart = true;
                         break;
@@ -159,6 +165,17 @@ namespace CVRP
                         {
                             first.Points[i] = second.Points[j];
                             second.Points[j] = temp;
+
+                            if (first.Points[i].ID == first.Points[i - 1].ID || first.Points[i].ID == first.Points[i + 1].ID)
+                            {
+                                first.Points.RemoveAt(i);
+                            }
+
+                            if (second.Points[j].ID == second.Points[j - 1].ID || second.Points[j].ID == second.Points[j + 1].ID)
+                            {
+                                second.Points.RemoveAt(j);
+                            }
+
                             shouldRestart = true;
                             break;
                         }
