@@ -281,7 +281,7 @@ namespace CVRP
                 Console.WriteLine(item);
             }
 
-            Console.WriteLine("Total Length: {0}\n\n\n", totalLength);
+            Console.WriteLine("Total Length: {0}\nRoutes count: {1}\n\n\n", totalLength, solution.Count);
         }
 
         private void PrintData()
