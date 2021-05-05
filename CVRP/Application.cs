@@ -36,11 +36,7 @@ namespace CVRP
             Console.WriteLine("2-OPT\n");
             PrintSolution(solution);
 
-            ProcessSwap1_1(solution);
-            Console.WriteLine("SWAP (1, 1)\n");
-            PrintSolution(solution);
-
-            ProcessShift1_0(ref solution);
+            ProcessShift1_0(solution);
             Console.WriteLine("SHIFT (1, 0)\n");
             PrintSolution(solution);
 
@@ -48,7 +44,15 @@ namespace CVRP
             Console.WriteLine("2-OPT\n");
             PrintSolution(solution);
 
-            ProcessShift0_1(ref solution);
+            ProcessSwap1_1(solution);
+            Console.WriteLine("SWAP (1, 1)\n");
+            PrintSolution(solution);
+
+            Process2opt(solution);
+            Console.WriteLine("2-OPT\n");
+            PrintSolution(solution);
+
+            ProcessShift0_1(solution);
             Console.WriteLine("SHIFT (0, 1)\n");
             PrintSolution(solution);
 
@@ -57,7 +61,7 @@ namespace CVRP
             PrintSolution(solution);
         }
 
-        private void ProcessShift0_1(ref List<Route> solution)
+        private void ProcessShift0_1(List<Route> solution)
         {
             for (int i = 0; i < solution.Count - 1; i++)
             {
@@ -66,11 +70,9 @@ namespace CVRP
                     Shift(solution[j], solution[i]);
                 }
             }
-
-            solution = solution.Where(route => route.Points.Count > 2).ToList();
         }
 
-        private void ProcessShift1_0(ref List<Route> solution)
+        private void ProcessShift1_0(List<Route> solution)
         {
             for (int i = 0; i < solution.Count - 1; i++)
             {
@@ -79,8 +81,6 @@ namespace CVRP
                     Shift(solution[i], solution[j]);
                 }
             }
-
-            solution = solution.Where(route => route.Points.Count > 2).ToList();
         }
 
         private void Shift(Route first, Route second)
@@ -97,13 +97,15 @@ namespace CVRP
                 {
                     var minIndex = 0;
 
+                    if (!second.CanBeAdded(first.Points[i])) continue;
+
                     for (int j = 1; j < second.Points.Count - 1; j++)
                     {
                         var newFirst = (Route)first.Clone();
                         var newSecond = (Route)second.Clone();
 
-                        newSecond.Points.Insert(j, newFirst.Points[i]);
-                        newFirst.Points.RemoveAt(i);
+                        newSecond.InsertPoint(j, newFirst.Points[i]);
+                        newFirst.RemovePoint(i);
 
                         var newLength = newFirst.Length + newSecond.Length;
 
@@ -116,11 +118,8 @@ namespace CVRP
 
                     if (minIndex > 0)
                     {
-                        if (second.Points[minIndex].ID != first.Points[i].ID)
-                        {
-                            second.Points.Insert(minIndex, first.Points[i]);
-                        }
-                        first.Points.RemoveAt(i);
+                        second.InsertPoint(minIndex, first.Points[i]);
+                        first.RemovePoint(i);
                         shouldRestart = true;
                         break;
                     }
@@ -141,6 +140,8 @@ namespace CVRP
 
         private void Swap(Route first, Route second)
         {
+            if (first.IsEmpty || second.IsEmpty) return;
+
             var shouldRestart = true;
 
             while (shouldRestart)
@@ -156,25 +157,26 @@ namespace CVRP
                         var newFirst = (Route)first.Clone();
                         var newSecond = (Route)second.Clone();
 
-                        var temp = newFirst.Points[i];
-                        newFirst.Points[i] = newSecond.Points[j];
-                        newSecond.Points[j] = temp;
+                        var firstPoint = newFirst.Points[i];
+                        var secondPoint = newSecond.Points[j];
+
+                        newFirst.RemovePoint(i);
+                        newSecond.RemovePoint(j);
+
+                        if (!newFirst.CanBeAdded(secondPoint) || !newSecond.CanBeAdded(firstPoint)) continue;
+
+                        newFirst.InsertPoint(i, secondPoint);
+                        newSecond.InsertPoint(j, firstPoint);
 
                         var newLength = newFirst.Length + newSecond.Length;
+
                         if (newLength < totalLength)
                         {
-                            first.Points[i] = second.Points[j];
-                            second.Points[j] = temp;
+                            first.RemovePoint(i);
+                            second.RemovePoint(j);
 
-                            if (first.Points[i].ID == first.Points[i - 1].ID || first.Points[i].ID == first.Points[i + 1].ID)
-                            {
-                                first.Points.RemoveAt(i);
-                            }
-
-                            if (second.Points[j].ID == second.Points[j - 1].ID || second.Points[j].ID == second.Points[j + 1].ID)
-                            {
-                                second.Points.RemoveAt(j);
-                            }
+                            first.InsertPoint(i, secondPoint);
+                            second.InsertPoint(j, firstPoint);
 
                             shouldRestart = true;
                             break;
@@ -196,6 +198,8 @@ namespace CVRP
 
         private void Process2opt(Route route)
         {
+            if (route.Points.Count < 4) return;
+
             var shouldRestart = true;
 
             while (shouldRestart)
@@ -233,32 +237,27 @@ namespace CVRP
 
             foreach (var vehicle in _vehicles)
             {
-                var route = new Route(vehicle);
+                var route = new Route(vehicle, depot);
 
                 var currentPoint = depot;
 
-                while (!vehicle.IsFull)
+                while (route.CanBeAdded(currentPoint))
                 {
-                    route.Points.Add(currentPoint);
-
                     if (currentPoint != depot)
                     {
-                        var volume = currentPoint.CurrentVolume;
-                        vehicle.FillBarrels(ref volume, ProductType.None); // None пока что
-                        currentPoint.CurrentVolume = volume;
+                        route.AddPoint(currentPoint);
+                        currentPoint.IsEmpty = true;
                     }
 
-                    var destinations = _points.Where(point => !point.IsEmpty).Select(point => point.ID).ToList();
+                    var destinationsIDs = _points.Where(point => !point.IsDepot && !point.IsEmpty && route.CanBeAdded(point)).Select(point => point.ID).ToList();
 
-                    if (destinations.Count == 0) break;
+                    if (destinationsIDs.Count == 0) break;
 
-                    var nearestDestinations = currentPoint.Distances.Where(item => destinations.Contains(item.Key)).OrderBy(item => item.Value);
+                    var nearestDestinations = currentPoint.Distances.Where(item => destinationsIDs.Contains(item.Key)).OrderBy(item => item.Value);
 
                     var nextPointID = nearestDestinations.First().Key;
                     currentPoint = _points.First(point => point.ID == nextPointID);
                 }
-
-                route.Points.Add(depot);
 
                 routes.Add(route);
 
@@ -281,7 +280,9 @@ namespace CVRP
                 Console.WriteLine(item);
             }
 
-            Console.WriteLine("Total Length: {0}\nRoutes count: {1}\n\n\n", totalLength, solution.Count);
+            var remainedPointsCount = _points.Where(point => solution.Count(route => !route.Points.Contains(point)) == solution.Count).Count();
+
+            Console.WriteLine("Total Length: {0}\nRoutes count: {1}\nNot empty routes count: {2}\nRemained points count: {3}\n\n\n", totalLength, solution.Count, solution.Count(route => !route.IsEmpty), remainedPointsCount);
         }
 
         private void PrintData()

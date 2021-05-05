@@ -12,6 +12,8 @@ namespace CVRP
     {
         private readonly string _filePath;
 
+        private int _productsCount;
+
         public List<Point> Points { get; }
         public List<Vehicle> Vehicles { get; }
 
@@ -32,6 +34,18 @@ namespace CVRP
 
                 while ((line = await sr.ReadLineAsync()) != null)
                 {
+                    if (line.Contains("DEMAND_SIZE"))
+                    {
+                        lineType = LineType.Demand;
+                        continue;
+                    }
+
+                    if (line.Contains("COMMON_PARAMETERS") || line.Contains("TIME_WINDOWS") || line.Contains("GEO-FENCE"))
+                    {
+                        lineType = LineType.None;
+                        continue;
+                    }
+
                     if (line.Contains("POINTS"))
                     {
                         lineType = LineType.Point;
@@ -41,12 +55,6 @@ namespace CVRP
                     if (line.Contains("CARS"))
                     {
                         lineType = LineType.Vehicle;
-                        continue;
-                    }
-
-                    if (line.Contains("COMMON_PARAMETERS"))
-                    {
-                        lineType = LineType.None;
                         continue;
                     }
 
@@ -63,6 +71,9 @@ namespace CVRP
 
                     switch (lineType)
                     {
+                        case LineType.Demand:
+                            ParseDemand(line);
+                            break;
                         case LineType.Point:
                             ParsePoints(line);
                             break;
@@ -91,6 +102,11 @@ namespace CVRP
             }
         }
 
+        private void ParseDemand(string line)
+        {
+            _productsCount = Convert.ToInt32(line);
+        }
+
         private void ParsePoints(string line)
         {
             var splitted = line.Split(new[] { ',' });
@@ -98,35 +114,21 @@ namespace CVRP
             var id = Convert.ToInt32(splitted[1]);
             var latitude = Convert.ToDouble(splitted[2], CultureInfo.InvariantCulture);
             var longitude = Convert.ToDouble(splitted[3], CultureInfo.InvariantCulture);
-            var firstVolume = Convert.ToInt32(splitted[4]);
-            var secondVolume = Convert.ToInt32(splitted[5]);
-            var thirdVolume = Convert.ToInt32(splitted[6]);
 
-            if (firstVolume > 0)
+            for (int i = 0; i < _productsCount; i++)
             {
-                var point = new Point(id, latitude, longitude, ProductType.First, firstVolume);
-                Points.Add(point);
+                if (splitted[i + 4] != "0")
+                {
+                    var volume = Convert.ToInt32(splitted[i + 4]);
 
-                return;
+                    var point = new Point(id, latitude, longitude, i, volume);
+                    Points.Add(point);
+
+                    return;
+                }
             }
 
-            if (secondVolume > 0)
-            {
-                var point = new Point(id, latitude, longitude, ProductType.Second, secondVolume);
-                Points.Add(point);
-
-                return;
-            }
-            
-            if (thirdVolume > 0)
-            {
-                var point = new Point(id, latitude, longitude, ProductType.Third, thirdVolume);
-                Points.Add(point);
-
-                return;
-            }
-
-            Points.Add(new Point(id, latitude, longitude, ProductType.None, 0));
+            Points.Add(new Point(id, latitude, longitude, -1, 0));
         }
 
         private void ParseVehicles(string line)
@@ -135,21 +137,19 @@ namespace CVRP
 
             var id = Convert.ToInt32(splitted[0]);
 
-            var barrelsString = splitted[24].Trim(new[] { '(', ')' });
-            var orderString = splitted[25].Split(new[] { ':' })[0].Trim(new[] { '(', ')' });
+            var barrelsString = splitted[18 + _productsCount * 2].Trim(new[] { '(', ')' });
 
             var barrelsSplitted = barrelsString.Split(new[] { ';' });
-            var orderSplitted = orderString.Split(new[] { ';' });
 
             var barrels = new List<Barrel>(barrelsSplitted.Length);
 
             for (int i = 0; i < barrelsSplitted.Length; i++)
             {
-                var barrel = new Barrel(Convert.ToInt32(barrelsSplitted[i]), Convert.ToInt32(orderSplitted[i]));
+                var barrel = new Barrel(Convert.ToInt32(barrelsSplitted[i]));
                 barrels.Add(barrel);
             }
 
-            var vehicle = new Vehicle(id, barrels);
+            var vehicle = new Vehicle(id, _productsCount, barrels);
             Vehicles.Add(vehicle);
         }
 

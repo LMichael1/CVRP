@@ -4,54 +4,72 @@ using System.Text;
 
 namespace CVRP
 {
-    class Barrel
+    class Barrel : ICloneable
     {
-        public int Order { get; }
-        public ProductType ProductType { get; private set; }
+        public int ProductType { get; private set; }
         public int FullCapacity { get; }
-        public int OccupiedCapacity { get; private set; }
+        public int OccupiedCapacity { get; set; }
         public int FreeCapacity => FullCapacity - OccupiedCapacity;
         public bool IsFull => FreeCapacity == 0;
+        public bool IsEmpty => OccupiedCapacity == 0;
         
-        public Barrel(int fullCapacity, int order)
+        public Barrel(int fullCapacity)
         {
-            Order = order;
             FullCapacity = fullCapacity;
             OccupiedCapacity = 0;
+            ProductType = -1;
         }
 
-        public bool Fill(ref int volume, ProductType type)
+        public Barrel(int fullCapacity, int productType)
         {
-            if ((ProductType == ProductType.None || ProductType == type) && !IsFull)
+            FullCapacity = fullCapacity;
+            OccupiedCapacity = 0;
+            ProductType = productType;
+        }
+
+        public void Fill(int volume, int productType)
+        {
+            if (ProductType != -1 && ProductType != productType)
             {
-                ProductType = type;
-
-                if (volume >= FreeCapacity)
-                {
-                    volume -= FreeCapacity;
-                    OccupiedCapacity += FreeCapacity;
-                }
-                else
-                {
-                    OccupiedCapacity += volume;
-                    volume = 0;
-                }
-
-                return true;
+                throw new ArgumentException("Incorrect product type.");
             }
 
-            return false;
+            if (volume > FreeCapacity)
+            {
+                throw new ArgumentException("Incorrect volume.");
+            }
+
+            OccupiedCapacity += volume;
+            ProductType = productType;
+        }
+
+        public void Remove(int volume)
+        {
+            if (volume > OccupiedCapacity)
+            {
+                throw new ArgumentException("Incorrect volume.");
+            }
+
+            OccupiedCapacity -= volume;
         }
 
         public void Reset()
         {
-            ProductType = ProductType.None;
+            ProductType = -1;
             OccupiedCapacity = 0;
         }
 
         public override string ToString()
         {
-            return string.Format("{0}, {1}/{2} ", Order, OccupiedCapacity, FullCapacity);
+            return string.Format("{0}/{1} ", OccupiedCapacity, FullCapacity);
+        }
+
+        public object Clone()
+        {
+            var barrel = new Barrel(FullCapacity, ProductType);
+            barrel.OccupiedCapacity = OccupiedCapacity;
+
+            return barrel;
         }
     }
 }

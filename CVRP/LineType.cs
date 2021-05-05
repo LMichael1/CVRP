@@ -7,6 +7,7 @@ namespace CVRP
     enum LineType
     {
         None,
+        Demand,
         Point,
         Vehicle,
         Matrix

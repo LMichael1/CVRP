@@ -6,51 +6,38 @@ using System.Text;
 
 namespace CVRP
 {
-    class Vehicle : IComparable<Vehicle>
+    class Vehicle : IComparable<Vehicle>, ICloneable
     {
         public int ID { get; }
         public List<Barrel> Barrels { get; }
-        public int FullCapacity
-        {
-            get
-            {
-                var sum = 0;
+        public List<Barrel> VirtualBarrels { get; }
+        public int FullCapacity => Barrels.Sum(barrel => barrel.FullCapacity);
+        public int OccupiedCapacity => VirtualBarrels.Sum(barrel => barrel.OccupiedCapacity);
+        public bool IsFull => FullCapacity == OccupiedCapacity;
 
-                foreach (var barrel in Barrels)
-                {
-                    sum += barrel.FullCapacity;
-                }
-
-                return sum;
-            }
-        }
-        public bool IsFull => Barrels.Where(barrel => barrel.IsFull).Count() == Barrels.Count;
-
-        public Vehicle(int id, IEnumerable<Barrel> barrels)
+        public Vehicle(int id, int productsCount, IEnumerable<Barrel> barrels)
         {
             ID = id;
-            Barrels = barrels.OrderBy(barrel => barrel.Order).ToList();
-        }
+            Barrels = barrels.OrderBy(barrel => barrel.FullCapacity).ToList();
 
-        public void FillBarrels(ref int volume, ProductType productType)
-        {
-            foreach (var barrel in Barrels)
+            VirtualBarrels = new List<Barrel>();
+
+            for (int i = 0; i < productsCount; i++)
             {
-                if (volume == 0)
-                {
-                    break;
-                }
-
-                barrel.Fill(ref volume, productType);
+                VirtualBarrels.Add(new Barrel(FullCapacity, i));
             }
         }
 
-        public void Reset()
+        public void Fill(Point point)
         {
-            foreach (var barrel in Barrels)
-            {
-                barrel.Reset();
-            }
+            var virtualBarrel = VirtualBarrels.First(barrel => barrel.ProductType == point.ProductType);
+            virtualBarrel.Fill(point.Volume, point.ProductType);
+        }
+
+        public void Remove(Point point)
+        {
+            var virtualBarrel = VirtualBarrels.First(barrel => barrel.ProductType == point.ProductType);
+            virtualBarrel.Remove(point.Volume);
         }
 
         public override string ToString()
@@ -80,6 +67,18 @@ namespace CVRP
             }
 
             return 0;
+        }
+
+        public object Clone()
+        {
+            var barrels = new List<Barrel>();
+
+            foreach (var barrel in Barrels)
+            {
+                barrels.Add((Barrel)barrel.Clone());
+            }
+
+            return new Vehicle(ID, VirtualBarrels.Count, barrels);
         }
     }
 }
