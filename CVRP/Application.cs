@@ -10,9 +10,6 @@ namespace CVRP
     {
         private readonly string[] _args;
 
-        private List<Point> _points;
-        private List<Vehicle> _vehicles;
-
         public Application(string[] args)
         {
             _args = args;
@@ -23,62 +20,70 @@ namespace CVRP
             var parser = new Parser(_args[0]);
             await parser.Parse();
 
-            _points = parser.Points;
-            _vehicles = parser.Vehicles;
-            _vehicles.Sort((a, b) => b.CompareTo(a));
+            var points = parser.Points;
+            var vehicles = parser.Vehicles;
+            vehicles.Sort((a, b) => b.CompareTo(a));
 
-            var solution = GetInitialSolution();
+            var solution = GetInitialSolution(points, vehicles);
+
+            var initialLength = solution.TotalLength;
 
             Console.WriteLine("INITIAL\n");
-            PrintSolution(solution);
+            Console.WriteLine(solution);
 
             Process2opt(solution);
             Console.WriteLine("2-OPT\n");
-            PrintSolution(solution);
+            Console.WriteLine(solution);
 
             ProcessShift1_0(solution);
             Console.WriteLine("SHIFT (1, 0)\n");
-            PrintSolution(solution);
+            Console.WriteLine(solution);
 
             Process2opt(solution);
             Console.WriteLine("2-OPT\n");
-            PrintSolution(solution);
+            Console.WriteLine(solution);
 
             ProcessSwap1_1(solution);
             Console.WriteLine("SWAP (1, 1)\n");
-            PrintSolution(solution);
+            Console.WriteLine(solution);
 
             Process2opt(solution);
             Console.WriteLine("2-OPT\n");
-            PrintSolution(solution);
+            Console.WriteLine(solution);
 
             ProcessShift0_1(solution);
             Console.WriteLine("SHIFT (0, 1)\n");
-            PrintSolution(solution);
+            Console.WriteLine(solution); ;
 
             Process2opt(solution);
             Console.WriteLine("2-OPT\n");
-            PrintSolution(solution);
+            Console.WriteLine(solution);
+
+            var finalLength = solution.TotalLength;
+            var diffKm = Math.Round((initialLength - finalLength) / 1000.0, 1);
+            var percents = Math.Round(100 - (finalLength * 100 / initialLength), 1);
+
+            Console.WriteLine("Solution length was reduced by {0} km ({1}%)", diffKm, percents);
         }
 
-        private void ProcessShift0_1(List<Route> solution)
+        private void ProcessShift0_1(Solution solution)
         {
-            for (int i = 0; i < solution.Count - 1; i++)
+            for (int i = 0; i < solution.Routes.Count - 1; i++)
             {
-                for (int j = i + 1; j < solution.Count; j++)
+                for (int j = i + 1; j < solution.Routes.Count; j++)
                 {
-                    Shift(solution[j], solution[i]);
+                    Shift(solution.Routes[j], solution.Routes[i]);
                 }
             }
         }
 
-        private void ProcessShift1_0(List<Route> solution)
+        private void ProcessShift1_0(Solution solution)
         {
-            for (int i = 0; i < solution.Count - 1; i++)
+            for (int i = 0; i < solution.Routes.Count - 1; i++)
             {
-                for (int j = i + 1; j < solution.Count; j++)
+                for (int j = i + 1; j < solution.Routes.Count; j++)
                 {
-                    Shift(solution[i], solution[j]);
+                    Shift(solution.Routes[i], solution.Routes[j]);
                 }
             }
         }
@@ -127,13 +132,13 @@ namespace CVRP
             }
         }
 
-        private void ProcessSwap1_1(List<Route> solution)
+        private void ProcessSwap1_1(Solution solution)
         {
-            for (int i = 0; i < solution.Count - 1; i++)
+            for (int i = 0; i < solution.Routes.Count - 1; i++)
             {
-                for (int j = i + 1; j < solution.Count; j++)
+                for (int j = i + 1; j < solution.Routes.Count; j++)
                 {
-                    Swap(solution[i], solution[j]);
+                    Swap(solution.Routes[i], solution.Routes[j]);
                 }
             }
         }
@@ -188,9 +193,9 @@ namespace CVRP
             }
         }
 
-        private void Process2opt(IEnumerable<Route> solution)
+        private void Process2opt(Solution solution)
         {
-            foreach (var route in solution)
+            foreach (var route in solution.Routes)
             {
                 Process2opt(route);
             }
@@ -230,12 +235,12 @@ namespace CVRP
             }
         }
 
-        private List<Route> GetInitialSolution()
+        private Solution GetInitialSolution(List<Point> points, List<Vehicle> vehicles)
         {
-            var depot = _points.FirstOrDefault(point => point.IsDepot);
+            var depot = points.FirstOrDefault(point => point.IsDepot);
             var routes = new List<Route>();
 
-            foreach (var vehicle in _vehicles)
+            foreach (var vehicle in vehicles)
             {
                 var route = new Route(vehicle, depot);
 
@@ -249,56 +254,25 @@ namespace CVRP
                         currentPoint.IsEmpty = true;
                     }
 
-                    var destinationsIDs = _points.Where(point => !point.IsDepot && !point.IsEmpty && route.CanBeAdded(point)).Select(point => point.ID).ToList();
+                    var destinationsIDs = points.Where(point => !point.IsDepot && !point.IsEmpty && route.CanBeAdded(point)).Select(point => point.ID).ToList();
 
                     if (destinationsIDs.Count == 0) break;
 
                     var nearestDestinations = currentPoint.Distances.Where(item => destinationsIDs.Contains(item.Key)).OrderBy(item => item.Value);
 
                     var nextPointID = nearestDestinations.First().Key;
-                    currentPoint = _points.First(point => point.ID == nextPointID);
+                    currentPoint = points.First(point => point.ID == nextPointID);
                 }
 
                 routes.Add(route);
 
-                if (_points.Where(point => !point.IsEmpty).Count() == 0)
+                if (points.Where(point => !point.IsEmpty).Count() == 0)
                 {
                     break;
                 }
             }
 
-            return routes;
-        }
-
-        private void PrintSolution(List<Route> solution)
-        {
-            var totalLength = 0.0;
-
-            foreach (var item in solution)
-            {
-                totalLength += item.Length;
-                Console.WriteLine(item);
-            }
-
-            var remainedPointsCount = _points.Where(point => solution.Count(route => !route.Points.Contains(point)) == solution.Count).Count();
-
-            Console.WriteLine("Total Length: {0}\nRoutes count: {1}\nNot empty routes count: {2}\nRemained points count: {3}\n\n\n", totalLength, solution.Count, solution.Count(route => !route.IsEmpty), remainedPointsCount);
-        }
-
-        private void PrintData()
-        {
-            Console.WriteLine("======POINTS======\n");
-            foreach (var point in _points)
-            {
-                Console.WriteLine(point);
-                Console.WriteLine();
-            }
-
-            Console.WriteLine("======VEHICLES======\n");
-            foreach (var vehicle in _vehicles)
-            {
-                Console.WriteLine(vehicle);
-            }
+            return new Solution(points, vehicles, routes);
         }
     }
 }

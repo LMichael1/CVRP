@@ -61,7 +61,7 @@ namespace CVRP
 
         public override string ToString()
         {
-            return string.Format("{0}/{1} ", OccupiedCapacity, FullCapacity);
+            return string.Format("{0}/{1}({2}) ", OccupiedCapacity, FullCapacity, ProductType);
         }
 
         public object Clone()

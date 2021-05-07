@@ -43,38 +43,50 @@ namespace CVRP
             var currentBarrel = clone.VirtualBarrels.First(barrel => barrel.ProductType == point.ProductType);
             clone.Fill(point);
 
-            foreach (var virtualBarrel in clone.VirtualBarrels.Where(barrel => !barrel.IsEmpty).OrderBy(barrel => barrel.OccupiedCapacity))
+            ManageBarrels(clone);
+
+            return clone.VirtualBarrels.Sum(barrel => barrel.OccupiedCapacity) == clone.Barrels.Sum(barrel => barrel.OccupiedCapacity);
+        }
+
+        private void ManageBarrels(Vehicle vehicle)
+        {
+            foreach (var barrel in vehicle.Barrels)
             {
-                var suitableBarrel = clone.Barrels.Where(barrel => (barrel.ProductType == virtualBarrel.ProductType || barrel.ProductType == -1)
-                    && barrel.FreeCapacity >= virtualBarrel.OccupiedCapacity)
+                barrel.Reset();
+            }
+
+            foreach (var virtualBarrel in vehicle.VirtualBarrels.Where(barrel => !barrel.IsEmpty).OrderBy(barrel => barrel.OccupiedCapacity))
+            {
+                var volume = virtualBarrel.OccupiedCapacity;
+
+                var suitableBarrel = vehicle.Barrels.Where(barrel => (barrel.ProductType == virtualBarrel.ProductType || barrel.ProductType == -1)
+                    && barrel.FreeCapacity >= volume)
                     .OrderBy(barrel => barrel.FreeCapacity).FirstOrDefault();
 
                 if (suitableBarrel != null)
                 {
-                    suitableBarrel.Fill(virtualBarrel.OccupiedCapacity, virtualBarrel.ProductType);
-                    virtualBarrel.OccupiedCapacity = 0;
+                    suitableBarrel.Fill(volume, virtualBarrel.ProductType);
+                    volume = 0;
                     continue;
                 }
 
-                foreach (var realBarrel in clone.Barrels.Where(barrel => !barrel.IsFull
+                foreach (var realBarrel in vehicle.Barrels.Where(barrel => !barrel.IsFull
                     && (barrel.ProductType == virtualBarrel.ProductType || barrel.ProductType == -1))
                     .OrderBy(barrel => barrel.FreeCapacity))
                 {
-                    if (virtualBarrel.OccupiedCapacity > realBarrel.FreeCapacity)
+                    if (volume > realBarrel.FreeCapacity)
                     {
-                        virtualBarrel.OccupiedCapacity -= realBarrel.FreeCapacity;
+                        volume -= realBarrel.FreeCapacity;
                         realBarrel.Fill(realBarrel.FreeCapacity, virtualBarrel.ProductType);
                     }
                     else
                     {
-                        realBarrel.Fill(virtualBarrel.OccupiedCapacity, virtualBarrel.ProductType);
-                        virtualBarrel.OccupiedCapacity = 0;
+                        realBarrel.Fill(volume, virtualBarrel.ProductType);
+                        volume = 0;
                         break;
                     }
                 }
             }
-
-            return clone.VirtualBarrels.Count(barrel => barrel.OccupiedCapacity > 0) == 0;
         }
 
         public void AddPoint(Point point)
@@ -99,24 +111,25 @@ namespace CVRP
         {
             var stringBuilder = new StringBuilder();
 
-            stringBuilder.Append("---------------------------\n");
-
-            stringBuilder.Append("========= VEHICLE =========\n");
-            stringBuilder.Append(Vehicle.ToString());
-
-            stringBuilder.Append("========= ROUTE =========\n");
+            stringBuilder.Append("------------------------------------------------------\n");
 
             stringBuilder.Append("Route: ");
 
             foreach (var point in Points)
             {
-                stringBuilder.Append(point.ID);
-                stringBuilder.Append(" ");
+                stringBuilder.AppendFormat("{0}({1}:{2}) ", point.ID, point.ProductType, point.Volume);
             }
 
-            stringBuilder.AppendFormat("\nLength: {0}", Length);
+            var lengthKm = Math.Round(Length / 1000.0, 1);
 
-            stringBuilder.Append("\n---------------------------\n");
+            stringBuilder.AppendFormat("\nLength: {0} km ({1} m)\n\n", lengthKm, Length);
+
+            var clone = (Vehicle)Vehicle.Clone();
+            ManageBarrels(clone);
+
+            stringBuilder.Append(clone.ToString());
+
+            stringBuilder.Append("\n------------------------------------------------------\n");
 
             return stringBuilder.ToString();
         }
@@ -125,9 +138,11 @@ namespace CVRP
         {
             var clone = new Route((Vehicle)Vehicle.Clone(), Points[0]);
 
-            for (int i = 1; i < Points.Count - 1; i++)
+            clone.Points = new List<Point>();
+
+            foreach (var point in Points)
             {
-                clone.AddPoint(Points[i]);
+                clone.Points.Add(point);
             }
 
             return clone;

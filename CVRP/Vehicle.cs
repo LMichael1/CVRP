@@ -28,6 +28,13 @@ namespace CVRP
             }
         }
 
+        public Vehicle(int id, IEnumerable<Barrel> virtualBarrels, IEnumerable<Barrel> barrels)
+        {
+            ID = id;
+            Barrels = barrels.OrderBy(barrel => barrel.FullCapacity).ToList();
+            VirtualBarrels = virtualBarrels.ToList();
+        }
+
         public void Fill(Point point)
         {
             var virtualBarrel = VirtualBarrels.First(barrel => barrel.ProductType == point.ProductType);
@@ -44,11 +51,18 @@ namespace CVRP
         {
             StringBuilder result = new StringBuilder();
 
-            result.AppendFormat("ID: {0}\nBarrels:\n", ID);
+            result.AppendFormat("Vehicle ID: {0}\nBarrels: ", ID);
 
             foreach (var barrel in Barrels)
             {
-                result.AppendLine(barrel.ToString());
+                result.Append(barrel.ToString());
+            }
+
+            result.Append("\nVirtualBarrels: ");
+
+            foreach (var barrel in VirtualBarrels)
+            {
+                result.Append(barrel.ToString());
             }
 
             return result.ToString();
@@ -78,7 +92,14 @@ namespace CVRP
                 barrels.Add((Barrel)barrel.Clone());
             }
 
-            return new Vehicle(ID, VirtualBarrels.Count, barrels);
+            var virtualBarrels = new List<Barrel>();
+
+            foreach (var barrel in VirtualBarrels)
+            {
+                virtualBarrels.Add((Barrel)barrel.Clone());
+            }
+
+            return new Vehicle(ID, virtualBarrels, barrels);
         }
     }
 }
