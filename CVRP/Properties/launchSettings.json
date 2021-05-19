@@ -2,7 +2,7 @@
   "profiles": {
     "CVRP": {
       "commandName": "Project",
-      "commandLineArgs": "E:\\Diploma\\0156_26828_08302021.txt"
+      "commandLineArgs": "E:\\Diploma\\0157_92_v2_tripRouteDurationMark_24xvectors.txt"
     }
   }
 }

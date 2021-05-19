@@ -37,7 +37,7 @@ namespace CVRP
 
             var lengthKm = Math.Round(TotalLength / 1000.0, 1);
 
-            stringBuilder.AppendFormat("\nTotal Length: {0} km ({1} m)\nRoutes count: {2}\nNot empty routes count: {3}\nRemained points count: {4}\n\n\n", 
+            stringBuilder.AppendFormat("\nTotal Length: {0} km ({1} m)\nVehicles count: {2}\nRoutes count: {3}\nRemained points count: {4}\n\n\n", 
                 lengthKm, TotalLength, Routes.Count, NotEmptyRoutesCount, RemainedPoints.Count);
 
             return stringBuilder.ToString();
