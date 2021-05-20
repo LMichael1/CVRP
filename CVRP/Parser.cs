@@ -13,6 +13,7 @@ namespace CVRP
         private readonly string _filePath;
 
         private int _productsCount;
+        private int _timeWindowsCount;
 
         public List<Point> Points { get; }
         public List<Vehicle> Vehicles { get; }
@@ -40,6 +41,12 @@ namespace CVRP
                         continue;
                     }
 
+                    if (line.Contains("TIME_WINDOWS"))
+                    {
+                        lineType = LineType.TimeWindows;
+                        continue;
+                    }
+
                     if (line.Contains("COMMON_PARAMETERS") || line.Contains("TIME_WINDOWS") || line.Contains("GEO-FENCE"))
                     {
                         lineType = LineType.None;
@@ -60,11 +67,22 @@ namespace CVRP
 
                     if (line.Contains("DISTANCE"))
                     {
-                        lineType = LineType.Matrix;
+                        lineType = LineType.DistancesMatrix;
                         continue;
                     }
 
-                    if (lineType == LineType.Matrix && line[0] != '0')
+                    if (line.Contains("TIME"))
+                    {
+                        lineType = LineType.TimesMatrix;
+                        continue;
+                    }
+
+                    if (lineType == LineType.DistancesMatrix && line[0] != '0')
+                    {
+                        continue;
+                    }
+
+                    if (line.Contains("CAR_TARIFF"))
                     {
                         break;
                     }
@@ -74,14 +92,20 @@ namespace CVRP
                         case LineType.Demand:
                             ParseDemand(line);
                             break;
+                        case LineType.TimeWindows:
+                            ParseTimeWindows(line);
+                            break;
                         case LineType.Point:
                             ParsePoints(line);
                             break;
                         case LineType.Vehicle:
                             ParseVehicles(line);
                             break;
-                        case LineType.Matrix:
-                            ParseMatrix(line);
+                        case LineType.DistancesMatrix:
+                            ParseDistancesMatrix(line);
+                            break;
+                        case LineType.TimesMatrix:
+                            ParseTimesMatrix(line);
                             break;
                         default:
                             break;
@@ -107,6 +131,11 @@ namespace CVRP
             _productsCount = Convert.ToInt32(line);
         }
 
+        private void ParseTimeWindows(string line)
+        {
+            _timeWindowsCount = Convert.ToInt32(line);
+        }
+
         private void ParsePoints(string line)
         {
             var splitted = line.Split(new[] { ',' });
@@ -115,20 +144,40 @@ namespace CVRP
             var latitude = Convert.ToDouble(splitted[2], CultureInfo.InvariantCulture);
             var longitude = Convert.ToDouble(splitted[3], CultureInfo.InvariantCulture);
 
+            var volume = 0;
+            var productID = -1;
+
             for (int i = 0; i < _productsCount; i++)
             {
                 if (splitted[i + 4] != "0")
                 {
-                    var volume = Convert.ToInt32(splitted[i + 4]);
-
-                    var point = new Point(id, latitude, longitude, i, volume);
-                    Points.Add(point);
-
-                    return;
+                    volume = Convert.ToInt32(splitted[i + 4]);
+                    productID = i;
+                    break;
                 }
             }
 
-            Points.Add(new Point(id, latitude, longitude, -1, 0));
+            var timeWindows = new List<TimeWindow>();
+            var index = 4 + _productsCount;
+
+            for (int i = 0; i < _timeWindowsCount; i++)
+            {
+                var start = Convert.ToInt32(splitted[index]);
+                var end = Convert.ToInt32(splitted[index + 1]);
+
+                if (start != end)
+                {
+                    timeWindows.Add(new TimeWindow(start, end));
+                }
+
+                index += 2;
+            }
+
+            var serviceTime = Convert.ToInt32(splitted[index]);
+            var penaltyLate = Convert.ToInt32(splitted[index + 2]);
+            var penaltyWait = Convert.ToInt32(splitted[index + 3]);
+
+            Points.Add(new Point(id, latitude, longitude, productID, volume, timeWindows, serviceTime, penaltyLate, penaltyWait));
         }
 
         private void ParseVehicles(string line)
@@ -153,7 +202,7 @@ namespace CVRP
             Vehicles.Add(vehicle);
         }
 
-        private void ParseMatrix(string line)
+        private void ParseDistancesMatrix(string line)
         {
             var splitted = line.Split(new[] { ',' });
 
@@ -163,6 +212,18 @@ namespace CVRP
             var distance = Convert.ToDouble(splitted[3], CultureInfo.InvariantCulture);
 
             Points[firstIndex].Distances.Add(Points[secondIndex].ID, distance);
+        }
+
+        private void ParseTimesMatrix(string line)
+        {
+            var splitted = line.Split(new[] { ',' });
+
+            var firstIndex = Convert.ToInt32(splitted[1]);
+            var secondIndex = Convert.ToInt32(splitted[2]);
+
+            var time = Convert.ToInt32(splitted[3]);
+
+            Points[firstIndex].Times.Add(Points[secondIndex].ID, time);
         }
     }
 }

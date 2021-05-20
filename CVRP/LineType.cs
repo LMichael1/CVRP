@@ -8,8 +8,10 @@ namespace CVRP
     {
         None,
         Demand,
+        TimeWindows,
         Point,
         Vehicle,
-        Matrix
+        DistancesMatrix,
+        TimesMatrix
     }
 }

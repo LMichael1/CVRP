@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace CVRP
@@ -13,17 +14,28 @@ namespace CVRP
         public int Volume { get; }
         public bool IsEmpty { get; set; }
         public bool IsDepot => ID < 0;
+        public List<TimeWindow> TimeWindows { get; }
+        public int ServiceTime { get; }
+        public int PenaltyLate { get; }
+        public int PenaltyWait { get; }
         public Dictionary<int, double> Distances { get; set; }
+        public Dictionary<int, int> Times { get; set; }
 
-        public Point(int id, double latitude, double longitude, int type, int volume)
+        public Point(int id, double latitude, double longitude, int type, int volume, 
+            IEnumerable<TimeWindow> timeWindows, int serviceTime, int penaltyLate, int penaltyWait)
         {
             ID = id;
             Latitude = latitude;
             Longitude = longitude;
             Distances = new Dictionary<int, double>();
+            Times = new Dictionary<int, int>();
             ProductType = type;
             Volume = volume;
             IsEmpty = false;
+            TimeWindows = timeWindows.ToList();
+            ServiceTime = serviceTime;
+            PenaltyLate = penaltyLate;
+            PenaltyWait = penaltyWait;
         }
 
         public void Reset()
