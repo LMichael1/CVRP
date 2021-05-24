@@ -9,7 +9,8 @@ namespace CVRP
     {
         public Vehicle Vehicle { get; set; }
         public List<Point> Points { get; set; }
-        public double Length
+        public int StartTime { get; set; }
+        public double RealLength
         {
             get
             {
@@ -23,7 +24,119 @@ namespace CVRP
                 return length;
             }
         }
+        public double Length
+        {
+            get
+            {
+                var length = 0.0;
+                var time = StartTime;
+
+                for (int i = 0; i < Points.Count - 1; i++)
+                {
+                    length += Points[i].Distances[Points[i + 1].ID];
+
+                    if (Points[i].Times[Points[i + 1].ID] >= 800000000) // костыль)
+                    {
+                        length = 800000000;
+                        return length;
+                    }
+
+                    time += Points[i].Times[Points[i + 1].ID];
+
+                    // Если попадает в окно
+
+                    var window = Points[i + 1].TimeWindows.FirstOrDefault(window => time >= window.Start
+                        && time + Points[i + 1].ServiceTime <= window.End);
+
+                    if (window != null)
+                    {
+                        time += Points[i + 1].ServiceTime;
+                        continue;
+                    }
+
+                    // Если попадает в окно, но не успевает загрузиться
+
+                    window = Points[i + 1].TimeWindows.FirstOrDefault(window => time >= window.Start
+                        && time <= window.End);
+
+                    if (window != null)
+                    {
+                        time += Points[i + 1].ServiceTime;
+
+                        var penalty = (time - window.End) * Points[i + 1].PenaltyLate / 60;
+                        length += penalty;
+
+                        continue;
+                    }
+
+                    // Если приехал раньше или позже
+
+                    var minTime = int.MaxValue;
+                    var nearestWindow = Points[i + 1].TimeWindows.FirstOrDefault();
+
+                    foreach (var timeWindow in Points[i + 1].TimeWindows)
+                    {
+                        if (Math.Abs(time - timeWindow.Start) < minTime)
+                        {
+                            minTime = time - timeWindow.Start;
+                            nearestWindow = timeWindow;
+                        }
+
+                        if (Math.Abs(time - timeWindow.End) < minTime)
+                        {
+                            minTime = time - timeWindow.End;
+                            nearestWindow = timeWindow;
+                        }
+                    }
+
+                    if (minTime > 0) // опоздал
+                    {
+                        time += Points[i + 1].ServiceTime;
+
+                        var penalty = minTime * Points[i + 1].PenaltyLate / 60;
+
+                        length += penalty;
+
+                        continue;
+                    }
+                    else // приехал раньше
+                    {
+                        time += Math.Abs(minTime); // ждёт открытия
+                        time += Points[i + 1].ServiceTime;
+
+                        var penalty = Math.Abs(minTime) * Points[i + 1].PenaltyWait / 60;
+                        length += penalty;
+                    }
+                }
+
+                return length;
+            }
+        }
         public bool IsEmpty => Points.Count == 2;
+        public Dictionary<Point, int> PenaltyPoints
+        {
+            get
+            {
+                var penaltyPoints = new Dictionary<Point, int>();
+
+                var time = StartTime;
+
+                for (int i = 0; i < Points.Count - 1; i++)
+                {
+                    time += Points[i].Times[Points[i + 1].ID];
+                    time += Points[i + 1].ServiceTime;
+
+                    var windows = Points[i + 1].TimeWindows.Select(window => new TimeWindow(window.Start + Points[i + 1].ServiceTime, window.End));
+
+                    if (windows.Count(window => time >= window.Start && time <= window.End) == 0)
+                    {
+                        penaltyPoints[Points[i + 1]] = time;
+                    }
+                }
+
+                return penaltyPoints;
+            }
+        }
 
         public Route(Vehicle vehicle, Point depot)
         {
@@ -31,6 +144,7 @@ namespace CVRP
             Points = new List<Point>();
             Points.Add(depot);
             Points.Add(depot);
+            StartTime = -1;
         }
 
         public bool CanBeAdded(Point point)
@@ -59,6 +173,8 @@ namespace CVRP
             {
                 var volume = virtualBarrel.OccupiedCapacity;
 
+                // бочку с минимальным свободным местом, в которую можно залить всё из виртуальной
+
                 var suitableBarrel = vehicle.Barrels.Where(barrel => (barrel.ProductType == virtualBarrel.ProductType || barrel.ProductType == -1)
                     && barrel.FreeCapacity >= volume)
                     .OrderBy(barrel => barrel.FreeCapacity).FirstOrDefault();
@@ -70,16 +186,18 @@ namespace CVRP
                     continue;
                 }
 
+                // для каждой подходящей бочки по возрастанию объема
+
                 foreach (var realBarrel in vehicle.Barrels.Where(barrel => !barrel.IsFull
                     && (barrel.ProductType == virtualBarrel.ProductType || barrel.ProductType == -1))
                     .OrderBy(barrel => barrel.FreeCapacity))
                 {
-                    if (volume > realBarrel.FreeCapacity)
+                    if (volume > realBarrel.FreeCapacity) // если объем сырья виртуальной больше свободного места
                     {
                         volume -= realBarrel.FreeCapacity;
                         realBarrel.Fill(realBarrel.FreeCapacity, virtualBarrel.ProductType);
                     }
-                    else
+                    else // если меньше либо равен
                     {
                         realBarrel.Fill(volume, virtualBarrel.ProductType);
                         volume = 0;
@@ -97,6 +215,11 @@ namespace CVRP
 
         public void InsertPoint(int index, Point point)
         {
+            if (IsEmpty) // TODO: Do something with start times
+            {
+                StartTime = point.TimeWindows[0].Start - Points[0].Times[point.ID];
+            }
+
             Points.Insert(index, point);
             Vehicle.Fill(point);
         }
@@ -113,16 +236,44 @@ namespace CVRP
 
             stringBuilder.Append("------------------------------------------------------\n");
 
-            stringBuilder.Append("Route: ");
+            stringBuilder.Append("Route: \n");
+
+            var startTime = TimeSpan.FromSeconds(StartTime);
+            stringBuilder.AppendFormat("\nStartTime: {0}\n\n", startTime.ToString(@"dd\.hh\:mm\:ss"));
 
             foreach (var point in Points)
             {
-                stringBuilder.AppendFormat("{0}({1}:{2}) ", point.ID, point.ProductType, point.Volume);
+                if (point.IsDepot)
+                {
+                    stringBuilder.AppendFormat("ID: {0} [Depot]\n", point.ID);
+                    continue;
+                }
+
+                stringBuilder.AppendFormat("ID: {0}, Product: (Type {1}: {2}), Windows: [", point.ID, point.ProductType, point.Volume);
+
+                foreach (var window in point.TimeWindows)
+                {
+                    var start = TimeSpan.FromSeconds(window.Start);
+                    var end = TimeSpan.FromSeconds(window.End);
+
+                    stringBuilder.AppendFormat(" <{0} - {1}> ", start.ToString(@"dd\.hh\:mm"), end.ToString(@"dd\.hh\:mm"));
+                }
+
+                if (PenaltyPoints.ContainsKey(point))
+                {
+                    var time = TimeSpan.FromSeconds(PenaltyPoints[point]);
+
+                    stringBuilder.AppendFormat("], Arrived (penalty): [{0}", time.ToString(@"dd\.hh\:mm"));
+                }
+
+                stringBuilder.Append("]\n");
             }
 
-            var lengthKm = Math.Round(Length / 1000.0, 1);
+            var penaltiesLengthKm = Math.Round(Length / 1000.0, 1);
+            var lengthKm = Math.Round(RealLength / 1000.0, 1);
 
-            stringBuilder.AppendFormat("\nLength: {0} km ({1} m)\n\n", lengthKm, Length);
+            stringBuilder.AppendFormat("\nLength: {0} km", lengthKm);
+            stringBuilder.AppendFormat("\nLength with penalties: {0} km\n\n", penaltiesLengthKm);
 
             var clone = (Vehicle)Vehicle.Clone();
             ManageBarrels(clone);
@@ -144,6 +295,8 @@ namespace CVRP
             {
                 clone.Points.Add(point);
             }
+
+            clone.StartTime = StartTime;
 
             return clone;
         }

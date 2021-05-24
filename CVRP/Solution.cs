@@ -12,6 +12,7 @@ namespace CVRP
         public List<Vehicle> Vehicles { get; set; }
         public List<Point> RemainedPoints => Points.Where(point => !point.IsEmpty && !point.IsDepot).ToList();
         public double TotalLength => Routes.Sum(route => route.Length);
+        public double TotalRealLength => Routes.Sum(route => route.RealLength);
         public int NotEmptyRoutesCount => Routes.Count(route => route.Length > 2);
 
         public Solution()
@@ -35,10 +36,11 @@ namespace CVRP
                 stringBuilder.Append(route);
             }
 
-            var lengthKm = Math.Round(TotalLength / 1000.0, 1);
+            var realLengthKm = Math.Round(TotalRealLength / 1000.0, 1);
+            var penaltiesLengthKm = Math.Round(TotalLength / 1000.0, 1);
 
-            stringBuilder.AppendFormat("\nTotal Length: {0} km ({1} m)\nVehicles count: {2}\nRoutes count: {3}\nRemained points count: {4}\n\n\n", 
-                lengthKm, TotalLength, Routes.Count, NotEmptyRoutesCount, RemainedPoints.Count);
+            stringBuilder.AppendFormat("\nTotal Length: {0} km ({1} m)\nTotal length with penalties: {2} km ({3} m)\nVehicles count: {4}\nRoutes count: {5}\nRemained points count: {6}\n\n\n", 
+                realLengthKm, TotalRealLength, penaltiesLengthKm, TotalLength, Routes.Count, NotEmptyRoutesCount, RemainedPoints.Count);
 
             return stringBuilder.ToString();
         }

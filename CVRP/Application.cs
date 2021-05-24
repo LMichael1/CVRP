@@ -26,7 +26,7 @@ namespace CVRP
 
             var solution = GetInitialSolution(points, vehicles);
 
-            var initialLength = solution.TotalLength;
+            var initialLength = solution.TotalRealLength;
 
             Console.WriteLine("INITIAL\n");
             Console.WriteLine(solution);
@@ -59,7 +59,7 @@ namespace CVRP
             Console.WriteLine("2-OPT\n");
             Console.WriteLine(solution);
 
-            var finalLength = solution.TotalLength;
+            var finalLength = solution.TotalRealLength;
             var diffKm = Math.Round((initialLength - finalLength) / 1000.0, 1);
             var percents = Math.Round(100 - (finalLength * 100 / initialLength), 1);
 
@@ -92,6 +92,11 @@ namespace CVRP
         {
             var shouldRestart = true;
 
+            if (second.IsEmpty)
+            {
+                Console.WriteLine();
+            }
+
             while (shouldRestart)
             {
                 shouldRestart = false;
@@ -104,7 +109,7 @@ namespace CVRP
 
                     if (!second.CanBeAdded(first.Points[i])) continue;
 
-                    for (int j = 1; j < second.Points.Count - 1; j++)
+                    for (int j = 1; j < second.Points.Count; j++)
                     {
                         var newFirst = (Route)first.Clone();
                         var newSecond = (Route)second.Clone();
@@ -258,10 +263,36 @@ namespace CVRP
 
                     if (destinationsIDs.Count == 0) break;
 
-                    var nearestDestinations = currentPoint.Distances.Where(item => destinationsIDs.Contains(item.Key)).OrderBy(item => item.Value);
+                    // Переделано
 
-                    var nextPointID = nearestDestinations.First().Key;
-                    currentPoint = points.First(point => point.ID == nextPointID);
+                    var nearestDestinationsIDs = currentPoint.Distances.Where(item => destinationsIDs.Contains(item.Key)).OrderBy(item => item.Value);
+
+                    if (route.StartTime == -1)
+                    {
+                        var nextPointID = nearestDestinationsIDs.First().Key;
+                        var nextPoint = points.First(point => point.ID == nextPointID);
+
+                        route.StartTime = nextPoint.TimeWindows[0].Start - currentPoint.Times[nextPointID];
+
+                        currentPoint = nextPoint;
+                    }
+                    else
+                    {
+                        var lengths = new Dictionary<Point, double>();
+
+                        foreach (var id in nearestDestinationsIDs.Select(item => item.Key))
+                        {
+                            var point = points.First(point => point.ID == id);
+
+                            route.AddPoint(point);
+                            lengths[point] = route.Length;
+                            route.RemovePoint(route.Points.Count - 2);
+                        }
+
+                        var nextPoint = lengths.OrderBy(item => item.Value).Select(item => item.Key).First();
+
+                        currentPoint = nextPoint;
+                    }
                 }
 
                 routes.Add(route);

@@ -32,7 +32,7 @@ namespace CVRP
             ProductType = type;
             Volume = volume;
             IsEmpty = false;
-            TimeWindows = timeWindows.ToList();
+            TimeWindows = timeWindows.OrderBy(window => window.Start).ToList();
             ServiceTime = serviceTime;
             PenaltyLate = penaltyLate;
             PenaltyWait = penaltyWait;

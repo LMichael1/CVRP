@@ -82,6 +82,12 @@ namespace CVRP
                         continue;
                     }
 
+                    if (lineType == LineType.TimesMatrix && line[0] != '0')
+                    {
+                        break;
+                    }
+
+
                     if (line.Contains("CAR_TARIFF"))
                     {
                         break;
