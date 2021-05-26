@@ -2,95 +2,47 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace CVRP
 {
-    class Application
+    class Solver
     {
-        private readonly string[] _args;
+        private Solution Solution { get; }
 
-        public Application(string[] args)
+        public Solver(IEnumerable<Point> points, IEnumerable<Vehicle> vehicles)
         {
-            _args = args;
+            Solution = GetInitialSolution(points.ToList(), vehicles.ToList());
         }
 
-        public async Task RunAsync()
+        public void RunOptimization()
         {
-            var parser = new Parser(_args[0]);
-            await parser.Parse();
-
-            var points = parser.Points;
-            var vehicles = parser.Vehicles;
-            vehicles.Sort((a, b) => b.CompareTo(a));
-
-            var solution = GetInitialSolution(points, vehicles);
-
-            var initialLength = solution.TotalRealLength;
-            var initialPenaltyLength = solution.TotalLength;
-
-            Console.WriteLine("INITIAL\n");
-            Console.WriteLine(solution);
-
-            Process2opt(solution);
-            Console.WriteLine("2-OPT\n");
-            Console.WriteLine(solution);
-
-            ProcessShift1_0(solution);
-            Console.WriteLine("SHIFT (1, 0)\n");
-            Console.WriteLine(solution);
-
-            Process2opt(solution);
-            Console.WriteLine("2-OPT\n");
-            Console.WriteLine(solution);
-
-            ProcessSwap1_1(solution);
-            Console.WriteLine("SWAP (1, 1)\n");
-            Console.WriteLine(solution);
-
-            Process2opt(solution);
-            Console.WriteLine("2-OPT\n");
-            Console.WriteLine(solution);
-
-            ProcessShift0_1(solution);
-            Console.WriteLine("SHIFT (0, 1)\n");
-            Console.WriteLine(solution);
-
-            Process2opt(solution);
-            Console.WriteLine("2-OPT\n");
-            Console.WriteLine(solution);
-
-            var finalLength = solution.TotalRealLength;
-            var diffKm = Math.Round((initialLength - finalLength) / 1000.0, 1);
-            var percents = Math.Round(100 - (finalLength * 100 / initialLength), 1);
-
-            Console.WriteLine("Solution length was reduced by {0} km ({1}%)", diffKm, percents);
-
-            finalLength = solution.TotalLength;
-            diffKm = Math.Round((initialPenaltyLength - finalLength) / 1000.0, 1);
-            percents = Math.Round(100 - (finalLength * 100 / initialPenaltyLength), 1);
-
-            Console.WriteLine("Solution length with penalties was reduced by {0} km ({1}%)", diffKm, percents);
+            Process2opt();
+            ProcessShift1_0();
+            Process2opt();
+            ProcessSwap1_1();
+            Process2opt();
+            ProcessShift0_1();
+            Process2opt();
         }
 
-        private void ProcessShift0_1(Solution solution)
+        private void ProcessShift0_1()
         {
-            for (int i = 0; i < solution.Routes.Count - 1; i++)
+            for (int i = 0; i < Solution.Routes.Count - 1; i++)
             {
-                for (int j = i + 1; j < solution.Routes.Count; j++)
+                for (int j = i + 1; j < Solution.Routes.Count; j++)
                 {
-                    Shift(solution.Routes[j], solution.Routes[i]);
+                    Shift(Solution.Routes[j], Solution.Routes[i]);
                 }
             }
         }
 
-        private void ProcessShift1_0(Solution solution)
+        private void ProcessShift1_0()
         {
-            for (int i = 0; i < solution.Routes.Count - 1; i++)
+            for (int i = 0; i < Solution.Routes.Count - 1; i++)
             {
-                for (int j = i + 1; j < solution.Routes.Count; j++)
+                for (int j = i + 1; j < Solution.Routes.Count; j++)
                 {
-                    Shift(solution.Routes[i], solution.Routes[j]);
+                    Shift(Solution.Routes[i], Solution.Routes[j]);
                 }
             }
         }
@@ -144,13 +96,13 @@ namespace CVRP
             }
         }
 
-        private void ProcessSwap1_1(Solution solution)
+        private void ProcessSwap1_1()
         {
-            for (int i = 0; i < solution.Routes.Count - 1; i++)
+            for (int i = 0; i < Solution.Routes.Count - 1; i++)
             {
-                for (int j = i + 1; j < solution.Routes.Count; j++)
+                for (int j = i + 1; j < Solution.Routes.Count; j++)
                 {
-                    Swap(solution.Routes[i], solution.Routes[j]);
+                    Swap(Solution.Routes[i], Solution.Routes[j]);
                 }
             }
         }
@@ -205,9 +157,9 @@ namespace CVRP
             }
         }
 
-        private void Process2opt(Solution solution)
+        private void Process2opt()
         {
-            foreach (var route in solution.Routes)
+            foreach (var route in Solution.Routes)
             {
                 Process2opt(route);
             }
@@ -269,8 +221,6 @@ namespace CVRP
                     var destinationsIDs = points.Where(point => !point.IsDepot && !point.IsEmpty && route.CanBeAdded(point)).Select(point => point.ID).ToList();
 
                     if (destinationsIDs.Count == 0) break;
-
-                    // Переделано
 
                     var nearestDestinationsIDs = currentPoint.Distances.Where(item => destinationsIDs.Contains(item.Key)).OrderBy(item => item.Value);
 

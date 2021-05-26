@@ -94,7 +94,6 @@ namespace CVRP
                         time += Points[i + 1].ServiceTime;
 
                         var penalty = minTime * Points[i + 1].PenaltyLate / 60;
-
                         length += penalty;
 
                         continue;
@@ -173,7 +172,7 @@ namespace CVRP
             {
                 var volume = virtualBarrel.OccupiedCapacity;
 
-                // бочку с минимальным свободным местом, в которую можно залить всё из виртуальной
+                // бочка с минимальным свободным местом, в которую можно залить всё из виртуальной
 
                 var suitableBarrel = vehicle.Barrels.Where(barrel => (barrel.ProductType == virtualBarrel.ProductType || barrel.ProductType == -1)
                     && barrel.FreeCapacity >= volume)
@@ -215,19 +214,25 @@ namespace CVRP
 
         public void InsertPoint(int index, Point point)
         {
-            if (IsEmpty) // TODO: Do something with start times
-            {
-                StartTime = point.TimeWindows[0].Start - Points[0].Times[point.ID];
-            }
-
             Points.Insert(index, point);
             Vehicle.Fill(point);
+
+            StartTime = Points[1].TimeWindows[0].Start - Points[0].Times[Points[1].ID];
         }
 
         public void RemovePoint(int index)
         {
             Vehicle.Remove(Points[index]);
             Points.RemoveAt(index);
+
+            if (Points.Count > 2)
+            {
+                StartTime = Points[1].TimeWindows[0].Start - Points[0].Times[Points[1].ID];
+            }
+            else
+            {
+                StartTime = -1;
+            }
         }
 
         public override string ToString()
