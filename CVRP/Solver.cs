@@ -5,13 +5,18 @@ using System.Text;
 
 namespace CVRP
 {
-    class Solver
+    public class Solver
     {
-        private Solution Solution { get; }
+        public Solution Solution { get; private set; }
 
         public Solver(IEnumerable<Point> points, IEnumerable<Vehicle> vehicles)
         {
-            Solution = GetInitialSolution(points.ToList(), vehicles.ToList());
+            var pointsList = points.ToList();
+            var vehiclesList = vehicles.ToList();
+
+            vehiclesList.Sort((a, b) => b.CompareTo(a));
+
+            Solution = GetInitialSolution(pointsList, vehiclesList);
         }
 
         public void RunOptimization()

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace CVRP
 {
-    class TimeWindow
+    public class TimeWindow
     {
         public int Start { get; set; }
         public int End { get; set; }

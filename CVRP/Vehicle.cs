@@ -6,7 +6,7 @@ using System.Text;
 
 namespace CVRP
 {
-    class Vehicle : IComparable<Vehicle>, ICloneable
+    public class Vehicle : IComparable<Vehicle>, ICloneable
     {
         public int ID { get; }
         public List<Barrel> Barrels { get; }

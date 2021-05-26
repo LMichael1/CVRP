@@ -5,7 +5,7 @@ using System.Text;
 
 namespace CVRP
 {
-    class Solution
+    public class Solution
     {
         public List<Route> Routes { get; set; }
         public List<Point> Points { get; set; } 

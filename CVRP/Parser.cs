@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CVRP
 {
-    class Parser
+    public class Parser
     {
         private readonly string _filePath;
 

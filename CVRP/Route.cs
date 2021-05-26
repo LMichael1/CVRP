@@ -5,7 +5,7 @@ using System.Text;
 
 namespace CVRP
 {
-    class Route : ICloneable
+    public class Route : ICloneable
     {
         public Vehicle Vehicle { get; set; }
         public List<Point> Points { get; set; }

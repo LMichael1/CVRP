@@ -4,7 +4,7 @@ using System.Text;
 
 namespace CVRP
 {
-    class Barrel : ICloneable
+    public class Barrel : ICloneable
     {
         public int ProductType { get; private set; }
         public int FullCapacity { get; }

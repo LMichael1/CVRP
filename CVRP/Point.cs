@@ -5,7 +5,7 @@ using System.Text;
 
 namespace CVRP
 {
-    class Point
+    public class Point
     {
         public int ID { get; }
         public double Latitude { get; }

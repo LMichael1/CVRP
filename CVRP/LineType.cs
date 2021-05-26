@@ -4,7 +4,7 @@ using System.Text;
 
 namespace CVRP
 {
-    enum LineType
+    public enum LineType
     {
         None,
         Demand,
