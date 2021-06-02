@@ -12,7 +12,9 @@ namespace CVRP
         public List<Vehicle> Vehicles { get; set; }
         public List<Point> RemainedPoints => Points.Where(point => !point.IsEmpty && !point.IsDepot).ToList();
         public double TotalLength => Routes.Sum(route => route.Length);
+        public double TotalLengthKm => Math.Round(TotalLength / 1000.0, 1);
         public double TotalRealLength => Routes.Sum(route => route.RealLength);
+        public double TotalRealLengthKm => Math.Round(TotalRealLength / 1000.0, 1);
         public int NotEmptyRoutesCount => Routes.Count(route => route.Length > 2);
 
         public Solution()

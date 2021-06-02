@@ -28,6 +28,11 @@ namespace CVRP
             Process2opt();
             ProcessShift0_1();
             Process2opt();
+
+            foreach (var route in Solution.Routes)
+            {
+                route.ManageBarrels(route.Vehicle);
+            }
         }
 
         private void ProcessShift0_1()

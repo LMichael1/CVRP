@@ -10,6 +10,7 @@ namespace CVRP
         public Vehicle Vehicle { get; set; }
         public List<Point> Points { get; set; }
         public int StartTime { get; set; }
+        public string StartTimeString => TimeSpan.FromSeconds(StartTime).ToString(@"dd\.hh\:mm\:ss");
         public double RealLength
         {
             get
@@ -111,8 +112,10 @@ namespace CVRP
                 return length;
             }
         }
+        public double RealLengthKm => Math.Round(RealLength / 1000.0, 1);
+        public double LengthKm => Math.Round(Length / 1000.0, 1);
         public bool IsEmpty => Points.Count == 2;
-        public Dictionary<Point, int> PenaltyPoints
+        public Dictionary<Point, int> PenaltyPoints // TODO: Проверить!!!
         {
             get
             {
@@ -120,20 +123,107 @@ namespace CVRP
 
                 var time = StartTime;
 
-                for (int i = 0; i < Points.Count - 1; i++)
+                for (int i = 0; i < Points.Count - 2; i++)
                 {
                     time += Points[i].Times[Points[i + 1].ID];
+
+                    var wait = 0;
+
+                    if (Points[i + 1].TimeWindows.FirstOrDefault(window => time >= window.Start
+                        && time <= window.End) == null)
+                    {
+                        var minTime = int.MaxValue;
+                        var nearestWindow = Points[i + 1].TimeWindows.FirstOrDefault();
+
+                        foreach (var timeWindow in Points[i + 1].TimeWindows)
+                        {
+                            if (Math.Abs(time - timeWindow.Start) < minTime)
+                            {
+                                minTime = time - timeWindow.Start;
+                                nearestWindow = timeWindow;
+                            }
+
+                            if (Math.Abs(time - timeWindow.End) < minTime)
+                            {
+                                minTime = time - timeWindow.End;
+                                nearestWindow = timeWindow;
+                            }
+                        }
+
+                        if (minTime < 0)
+                        {
+                            wait += Math.Abs(minTime);
+                        }
+                    }
+
                     time += Points[i + 1].ServiceTime;
 
                     var windows = Points[i + 1].TimeWindows.Select(window => new TimeWindow(window.Start + Points[i + 1].ServiceTime, window.End));
 
                     if (windows.Count(window => time >= window.Start && time <= window.End) == 0)
                     {
+                        time -= Points[i + 1].ServiceTime;
                         penaltyPoints[Points[i + 1]] = time;
                     }
+
+                    time += wait;
+                    time += Points[i + 1].ServiceTime;
                 }
 
                 return penaltyPoints;
+            }
+        }
+        public Dictionary<Point, int> ArrivalTimes // TODO: Проверить!!!
+        {
+            get
+            {
+                var points = new Dictionary<Point, int>();
+
+                var time = StartTime;
+
+                for (int i = 0; i < Points.Count - 1; i++)
+                {
+                    time += Points[i].Times[Points[i + 1].ID];
+
+                    if (i == points.Count - 2)
+                    {
+                        points[Points[i + 1]] = time;
+                        break;
+                    }
+
+                    points[Points[i + 1]] = time;
+
+                    if (Points[i + 1].TimeWindows.FirstOrDefault(window => time >= window.Start
+                        && time <= window.End) == null)
+                    {
+                        var minTime = int.MaxValue;
+                        var nearestWindow = Points[i + 1].TimeWindows.FirstOrDefault();
+
+                        foreach (var timeWindow in Points[i + 1].TimeWindows)
+                        {
+                            if (Math.Abs(time - timeWindow.Start) < minTime)
+                            {
+                                minTime = time - timeWindow.Start;
+                                nearestWindow = timeWindow;
+                            }
+
+                            if (Math.Abs(time - timeWindow.End) < minTime)
+                            {
+                                minTime = time - timeWindow.End;
+                                nearestWindow = timeWindow;
+                            }
+                        }
+
+                        if (minTime < 0)
+                        {
+                            time += Math.Abs(minTime);
+                        }
+                    }
+
+                    time += Points[i + 1].ServiceTime;
+                }
+
+                return points;
             }
         }
 
@@ -161,7 +251,7 @@ namespace CVRP
             return clone.VirtualBarrels.Sum(barrel => barrel.OccupiedCapacity) == clone.Barrels.Sum(barrel => barrel.OccupiedCapacity);
         }
 
-        private void ManageBarrels(Vehicle vehicle)
+        public void ManageBarrels(Vehicle vehicle)
         {
             foreach (var barrel in vehicle.Barrels)
             {

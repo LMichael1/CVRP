@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31019.35
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CVRP", "CVRP\CVRP.csproj", "{9C396D6E-7B72-423D-A391-F3DEE5295D58}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CVRP", "CVRP\CVRP.csproj", "{9C396D6E-7B72-423D-A391-F3DEE5295D58}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebInterface", "WebInterface\WebInterface.csproj", "{A621B327-FED7-4639-B33C-23D0B2C8687E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{9C396D6E-7B72-423D-A391-F3DEE5295D58}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9C396D6E-7B72-423D-A391-F3DEE5295D58}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9C396D6E-7B72-423D-A391-F3DEE5295D58}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A621B327-FED7-4639-B33C-23D0B2C8687E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A621B327-FED7-4639-B33C-23D0B2C8687E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A621B327-FED7-4639-B33C-23D0B2C8687E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A621B327-FED7-4639-B33C-23D0B2C8687E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
